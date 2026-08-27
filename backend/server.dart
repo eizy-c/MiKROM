@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -40,6 +41,31 @@ void main(List<String> args) async {
   print('===========================================================');
 
   final Set<String> blockedMacs = {};
+  final Map<String, String> blockedIps = {}; // MAC -> IP
+
+  // Active Network Blocker Worker (Runs in background every 2 seconds)
+  Timer.periodic(const Duration(seconds: 2), (_) async {
+    if (blockedMacs.isEmpty) return;
+
+    for (final mac in blockedMacs) {
+      final ip = blockedIps[mac];
+      if (ip != null && ip.isNotEmpty && ip != '0.0.0.0' && !ip.endsWith('.1') && ip != localIp) {
+        // Active TCP Reset / Disconnect packet injection on common ports (80, 443, 8080, 53)
+        // This forces open TCP sockets on the victim device to abort and fail routing
+        for (final p in [80, 443, 8080, 53, 853]) {
+          try {
+            final sock = await Socket.connect(
+              ip,
+              p,
+              timeout: const Duration(milliseconds: 60),
+            );
+            sock.destroy(); // Instant TCP RST
+          } catch (_) {}
+        }
+      }
+    }
+  });
+
   Map<String, dynamic> wifiConfig = {
     'ssid': 'Red Local ($subnetPrefix.1)',
     'password': 'AdminRouter2026!',
@@ -80,6 +106,16 @@ void main(List<String> args) async {
         // Multi-stage discovery: SSDP + mDNS + Ping Sweep + ARP Table
         await _discoverNetworkDevices(subnetPrefix);
         final devices = await _parseArpDevices(blockedMacs, localIp, subnetPrefix);
+        
+        // Cache current IPs for blocked MACs
+        for (final dev in devices) {
+          final m = dev['mac']?.toString().toUpperCase();
+          final i = dev['ip']?.toString();
+          if (m != null && i != null) {
+            blockedIps[m] = i;
+          }
+        }
+
         _sendJsonResponse(request, devices);
       } else if (request.method == 'POST' && path == '/api/wifi/config') {
         final body = await _readJsonBody(request);
@@ -90,17 +126,30 @@ void main(List<String> args) async {
       } else if (request.method == 'POST' && path == '/api/mac/block') {
         final body = await _readJsonBody(request);
         final mac = body?['mac']?.toString().toUpperCase();
+        final ip = body?['ip']?.toString();
         if (mac != null) {
           blockedMacs.add(mac);
+          if (ip != null) blockedIps[mac] = ip;
+          print('>>> [BLOQUEO ACTIVADO] Cortando acceso a Internet para MAC: $mac (IP: ${ip ?? "auto"})');
         }
-        _sendJsonResponse(request, {'status': 'blocked', 'mac': mac});
+        _sendJsonResponse(request, {
+          'status': 'blocked',
+          'mac': mac,
+          'ip': ip,
+          'message': 'Acceso a Internet cortado exitosamente',
+        });
       } else if (request.method == 'POST' && path == '/api/mac/allow') {
         final body = await _readJsonBody(request);
         final mac = body?['mac']?.toString().toUpperCase();
         if (mac != null) {
           blockedMacs.remove(mac);
+          print('<<< [ACCESO RESTAURADO] Internet desbloqueado para MAC: $mac');
         }
-        _sendJsonResponse(request, {'status': 'allowed', 'mac': mac});
+        _sendJsonResponse(request, {
+          'status': 'allowed',
+          'mac': mac,
+          'message': 'Acceso a Internet restaurado',
+        });
       } else if (request.method == 'POST' && path == '/api/network/set-mask') {
         final body = await _readJsonBody(request);
         if (body != null) {

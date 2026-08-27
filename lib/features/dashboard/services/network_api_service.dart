@@ -172,8 +172,8 @@ class NetworkApiService {
     }
   }
 
-  /// POST /api/mac/block -> Sends { "mac": string }
-  Future<bool> blockMac(String mac) async {
+  /// POST /api/mac/block -> Sends { "mac": string, "ip": string }
+  Future<bool> blockMac(String mac, {String? ip}) async {
     final cleanMac = mac.trim().toUpperCase();
     final isDemo = await ServerConfig.isDemoMode();
     if (isDemo) {
@@ -183,7 +183,7 @@ class NetworkApiService {
       } else {
         _demoDevices.add(
           DeviceModel(
-            ip: '0.0.0.0',
+            ip: ip ?? '0.0.0.0',
             mac: cleanMac,
             hostname: 'Dispositivo Bloqueado',
             isBlocked: true,
@@ -196,7 +196,10 @@ class NetworkApiService {
     try {
       final response = await _apiClient.post(
         ApiEndpoints.macBlock,
-        data: {'mac': cleanMac},
+        data: {
+          'mac': cleanMac,
+          if (ip != null && ip.isNotEmpty) 'ip': ip,
+        },
       );
       _updateLocalBlockStatus(cleanMac, true);
       return response.statusCode == 200;
@@ -206,8 +209,8 @@ class NetworkApiService {
     }
   }
 
-  /// POST /api/mac/allow -> Sends { "mac": string }
-  Future<bool> allowMac(String mac) async {
+  /// POST /api/mac/allow -> Sends { "mac": string, "ip": string }
+  Future<bool> allowMac(String mac, {String? ip}) async {
     final cleanMac = mac.trim().toUpperCase();
     final isDemo = await ServerConfig.isDemoMode();
     if (isDemo) {
@@ -221,7 +224,10 @@ class NetworkApiService {
     try {
       final response = await _apiClient.post(
         ApiEndpoints.macAllow,
-        data: {'mac': cleanMac},
+        data: {
+          'mac': cleanMac,
+          if (ip != null && ip.isNotEmpty) 'ip': ip,
+        },
       );
       _updateLocalBlockStatus(cleanMac, false);
       return response.statusCode == 200;

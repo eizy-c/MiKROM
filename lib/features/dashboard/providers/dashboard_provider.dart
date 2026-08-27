@@ -79,9 +79,11 @@ class DevicesNotifier extends StateNotifier<DevicesState> {
   }
 
   Future<bool> toggleDeviceBlock(String mac, bool shouldBlock) async {
-    // Optimistic UI update
+    // Find device IP if available
+    String? deviceIp;
     final updatedList = state.devices.map((device) {
       if (device.mac.toUpperCase() == mac.toUpperCase()) {
+        deviceIp = device.ip;
         return device.copyWith(isBlocked: shouldBlock);
       }
       return device;
@@ -92,9 +94,9 @@ class DevicesNotifier extends StateNotifier<DevicesState> {
     try {
       bool success = false;
       if (shouldBlock) {
-        success = await _apiService.blockMac(mac);
+        success = await _apiService.blockMac(mac, ip: deviceIp);
       } else {
-        success = await _apiService.allowMac(mac);
+        success = await _apiService.allowMac(mac, ip: deviceIp);
       }
       return success;
     } catch (e) {

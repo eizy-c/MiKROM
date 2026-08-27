@@ -222,9 +222,64 @@ class DashboardView extends ConsumerWidget {
             ),
             const SizedBox(height: 12),
 
-            // 4. Devices List / Skeletons
+            // 4. Devices List / Skeletons / Error Banner
             if (devicesState.isLoading || devicesState.isScanning)
               const SkeletonDeviceList(itemCount: 4)
+            else if (devicesState.errorMessage != null)
+              Container(
+                margin: const EdgeInsets.only(bottom: 16),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColors.statusDangerBg,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.statusDanger.withValues(alpha: 0.3)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.cloud_off_outlined, color: AppColors.statusDanger, size: 22),
+                        const SizedBox(width: 10),
+                        Text(
+                          'No se pudo conectar al daemon',
+                          style: AppTypography.bodyBold.copyWith(color: AppColors.statusDanger),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      devicesState.errorMessage!,
+                      style: AppTypography.bodyRegular.copyWith(fontSize: 12, color: AppColors.textPrimary),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.statusDanger,
+                            minimumSize: const Size(120, 36),
+                          ),
+                          icon: const Icon(Icons.refresh, size: 16),
+                          label: const Text('Reintentar', style: TextStyle(fontSize: 12)),
+                          onPressed: () {
+                            ref.read(devicesProvider.notifier).fetchDevices(isManualScan: true);
+                          },
+                        ),
+                        const SizedBox(width: 10),
+                        OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(
+                            minimumSize: const Size(140, 36),
+                          ),
+                          icon: const Icon(Icons.settings_outlined, size: 16),
+                          label: const Text('Ajustes de Host', style: TextStyle(fontSize: 12)),
+                          onPressed: () => ServerSettingsDialog.show(context),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              )
             else if (filteredDevices.isEmpty)
               _buildEmptyState(context, searchQuery.isNotEmpty)
             else

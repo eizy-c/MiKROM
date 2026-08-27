@@ -2,7 +2,7 @@
 class ApiEndpoints {
   ApiEndpoints._();
 
-  static const String defaultBaseUrl = 'http://192.168.1.1:8080';
+  static const String defaultBaseUrl = 'http://localhost:8080';
   
   // Endpoints defined in specification
   static const String devices = '/api/devices';

@@ -134,8 +134,11 @@ class NetworkApiService {
       }
       return [];
     } catch (e) {
-      // If server unreachable, use fallback demo devices so app remains operable
-      return List.from(_demoDevices);
+      // Re-throw so user gets clear feedback on connection status
+      final baseUrl = await ServerConfig.getBaseUrl();
+      throw NetworkException(
+        message: 'No se pudo conectar con el daemon en $baseUrl. Asegúrate de ejecutar "dart run backend/server.dart".',
+      );
     }
   }
 
@@ -269,8 +272,23 @@ class NetworkApiService {
       }
     }
 
+    String ssidName = 'Red Local (192.168.1.1)';
+    try {
+      final isDemo = await ServerConfig.isDemoMode();
+      if (!isDemo) {
+        final res = await _apiClient.get(ApiEndpoints.status);
+        if (res.data is Map && res.data['ssid'] != null) {
+          ssidName = res.data['ssid'].toString();
+        }
+      } else {
+        ssidName = _demoWifiConfig.ssid;
+      }
+    } catch (_) {
+      ssidName = _demoWifiConfig.ssid;
+    }
+
     return NetworkStatsModel(
-      ssid: _demoWifiConfig.ssid,
+      ssid: ssidName,
       isOnline: true,
       activeDevicesCount: activeCount,
       blockedDevicesCount: blockedCount,

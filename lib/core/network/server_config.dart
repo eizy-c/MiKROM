@@ -8,7 +8,7 @@ class ServerConfig {
 
   static Future<String> getBaseUrl() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_serverUrlKey) ?? ApiEndpoints.defaultBaseUrl;
+    return prefs.getString(_serverUrlKey) ?? 'http://localhost:8080';
   }
 
   static Future<void> setBaseUrl(String url) async {

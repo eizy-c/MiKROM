@@ -1,4 +1,5 @@
 import '../../../core/constants/api_endpoints.dart';
+import '../../../core/errors/network_exception.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/server_config.dart';
 import '../models/device_model.dart';
